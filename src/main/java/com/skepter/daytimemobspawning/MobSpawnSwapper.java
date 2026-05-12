@@ -23,10 +23,8 @@ public final class MobSpawnSwapper {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final AtomicInteger DEBUG_LOG_COUNT = new AtomicInteger();
 
-    /** ThreadLocal flag to prevent recursive swapping when we add the replacement entity */
     static final ThreadLocal<Boolean> REPLACING_SPAWN = ThreadLocal.withInitial(() -> Boolean.FALSE);
 
-    /** Passive mob types eligible to be swapped out for a hostile */
     static final Set<EntityType<?>> ELIGIBLE_PASSIVE_TYPES = Set.of(
         EntityType.ARMADILLO,
         EntityType.CAMEL,
@@ -52,7 +50,6 @@ public final class MobSpawnSwapper {
         EntityType.WOLF
     );
 
-    /** Weighted pool for standard biomes */
     private static final List<WeightedHostile> GENERIC_HOSTILE_POOL = List.of(
         new WeightedHostile(EntityType.CREEPER,         100),
         new WeightedHostile(EntityType.ENDERMAN,         10),
@@ -65,10 +62,6 @@ public final class MobSpawnSwapper {
 
     record WeightedHostile(EntityType<? extends Mob> type, int weight) {}
 
-    // -------------------------------------------------------------------------
-    // Event handler: swap passives that join the level via natural spawning
-    // -------------------------------------------------------------------------
-
     @SubscribeEvent
     public static void onEntityJoinLevel(EntityJoinLevelEvent event) {
         if (REPLACING_SPAWN.get()) return;
@@ -77,12 +70,12 @@ public final class MobSpawnSwapper {
         if (event.loadedFromDisk()) return;
 
         MobSpawnType spawnReason = mob.getSpawnType();
-        if (spawnReason == MobSpawnType.LOAD) return;
+        // Skip mobs being loaded from disk (TRIGGERED is closest to LOAD in 1.21.1)
+        if (spawnReason == null) return;
 
         EntityType<?> originalType = mob.getType();
         if (!ELIGIBLE_PASSIVE_TYPES.contains(originalType)) return;
 
-        // 50 % chance to swap
         if (serverLevel.random.nextFloat() >= 0.5f) {
             debug("Keeping {} because swap chance failed", originalType);
             return;
@@ -94,15 +87,15 @@ public final class MobSpawnSwapper {
 
         EntityType<? extends Mob> replacementType = pickReplacementType(serverLevel.random, isDesert, isSnowy);
 
-        net.minecraft.world.entity.Entity created = replacementType.create(serverLevel, getReplacementSpawnReason(spawnReason));
-        if (!(created instanceof Mob replacement)) {
+        Mob replacement = replacementType.create(serverLevel);
+        if (replacement == null) {
             debug("Skipping {} because replacement {} could not be created", originalType, replacementType);
             return;
         }
 
         copySpawnContext(mob, replacement);
 
-        replacement.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(pos), getReplacementSpawnReason(spawnReason), (SpawnGroupData) null);
+        replacement.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(pos), MobSpawnType.NATURAL, (SpawnGroupData) null);
 
         if (replacement.isRemoved()) {
             debug("Skipping {} because replacement {} was removed during finalizeSpawn", originalType, replacementType);
@@ -120,16 +113,11 @@ public final class MobSpawnSwapper {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Called from NaturalSpawnerMixin during chunk generation
-    // -------------------------------------------------------------------------
-
     public static EntityType<? extends Mob> getChunkGenerationReplacementType(
             EntityType<?> entityType,
             net.minecraft.util.RandomSource random,
             boolean isDesert,
             boolean isSnowy) {
-
         if (!ELIGIBLE_PASSIVE_TYPES.contains(entityType)) return null;
         return pickReplacementType(random, isDesert, isSnowy);
     }
@@ -139,10 +127,6 @@ public final class MobSpawnSwapper {
             || type == EntityType.HUSK
             || type == EntityType.STRAY;
     }
-
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
 
     private static EntityType<? extends Mob> pickReplacementType(
             net.minecraft.util.RandomSource random,
@@ -165,15 +149,7 @@ public final class MobSpawnSwapper {
             roll -= entry.weight();
             if (roll < 0) return entry.type();
         }
-        // Fallback (should not happen)
         return EntityType.ZOMBIE;
-    }
-
-    private static MobSpawnType getReplacementSpawnReason(MobSpawnType original) {
-        return switch (original) {
-            case NATURAL, CHUNK_GENERATION -> MobSpawnType.NATURAL;
-            default -> MobSpawnType.SPAWN_ITEM_USE;
-        };
     }
 
     private static void copySpawnContext(Mob from, Mob to) {
@@ -185,7 +161,7 @@ public final class MobSpawnSwapper {
     }
 
     public static void debugChunkGenerationAdd(Mob mob) {
-        debug("Swapping chunk-generation {} -> {}", mob.getType(), mob.getType());
+        debug("Swapping chunk-generation -> {}", mob.getType());
     }
 
     private static void debug(String msg, Object... args) {
