@@ -3,7 +3,7 @@ package com.skepter.daytimemobspawning;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.SpawnGroupData;
@@ -76,8 +76,8 @@ public final class MobSpawnSwapper {
         if (!(event.getLevel() instanceof ServerLevel serverLevel)) return;
         if (event.loadedFromDisk()) return;
 
-        EntitySpawnReason spawnReason = mob.getSpawnType();
-        if (spawnReason == EntitySpawnReason.LOAD) return;
+        MobSpawnType spawnReason = mob.getSpawnType();
+        if (spawnReason == MobSpawnType.LOAD) return;
 
         EntityType<?> originalType = mob.getType();
         if (!ELIGIBLE_PASSIVE_TYPES.contains(originalType)) return;
@@ -169,10 +169,10 @@ public final class MobSpawnSwapper {
         return EntityType.ZOMBIE;
     }
 
-    private static EntitySpawnReason getReplacementSpawnReason(EntitySpawnReason original) {
+    private static MobSpawnType getReplacementSpawnReason(MobSpawnType original) {
         return switch (original) {
-            case NATURAL, CHUNK_GENERATION -> EntitySpawnReason.NATURAL;
-            default -> EntitySpawnReason.SPAWN_ITEM_USE;
+            case NATURAL, CHUNK_GENERATION -> MobSpawnType.NATURAL;
+            default -> MobSpawnType.SPAWN_ITEM_USE;
         };
     }
 
@@ -184,7 +184,7 @@ public final class MobSpawnSwapper {
         return level.getBiome(pos).is(tag);
     }
 
-    static void debugChunkGenerationAdd(Mob mob) {
+    public static void debugChunkGenerationAdd(Mob mob) {
         debug("Swapping chunk-generation {} -> {}", mob.getType(), mob.getType());
     }
 
