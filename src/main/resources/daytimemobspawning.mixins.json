@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "com.skepter.daytimemobspawning.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "MobSunBurnMixin",
+    "NaturalSpawnerMixin",
+    "SpiderAttackGoalMixin",
+    "SpiderTargetGoalMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,0 +1,24 @@
+modLoader="javafml"
+loaderVersion="[21,)"
+license="MIT"
+
+[[dependencies.daytimemobspawning]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.daytimemobspawning]]
+    modId="minecraft"
+    type="required"
+    versionRange="[1.21.1,1.22)"
+    ordering="NONE"
+    side="BOTH"
+
+[[mods]]
+modId="daytimemobspawning"
+version="1.0.0"
+displayName="DaytimeMobSpawning"
+authors="Skepter"
+description="Eligible passive spawns have a chance to become daytime hostile mobs."
